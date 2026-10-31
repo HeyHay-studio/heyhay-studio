@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Manage Your AI Assistant — HeyHay Studio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #090d16;
+      color: #f8fafc;
+      padding: 24px 16px;
+      min-height: 100vh;
+    }
+    .container { max-width: 600px; margin: 0 auto; }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .logo-badge {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: white;
+    }
+    .card {
+      background: #111827;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 28px 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    h2 { font-size: 1.35rem; font-weight: 800; margin-bottom: 6px; }
+    p.desc { font-size: 0.88rem; color: #94a3b8; margin-bottom: 22px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-size: 0.82rem; font-weight: 700; text-transform: uppercase; color: #cbd5e1; margin-bottom: 8px; letter-spacing: 0.04em; }
+    textarea {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 14px;
+      color: white;
+      font-family: inherit;
+      font-size: 0.95rem;
+      min-height: 220px;
+      line-height: 1.6;
+    }
+    textarea:focus { outline: none; border-color: #10b981; }
+    .btn {
+      width: 100%;
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 16px;
+      border-radius: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn:active { transform: scale(0.98); }
+    .alert-success {
+      display: none;
+      margin-top: 16px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="logo-badge">H</div>
+    <div>
+      <h3 style="font-size: 1.15rem; font-weight: 800;">HeyHay Studio</h3>
+      <p style="font-size: 0.75rem; color: #94a3b8;">Client Self-Service Management Portal</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 id="clientTitle">Edit Products & Menu</h2>
+    <p class="desc">Update your pricing, products, or operating hours anytime. Your AI WhatsApp assistant will learn the changes immediately with zero downtime.</p>
+
+    <form id="portalForm">
+      <div class="form-group">
+        <label>Your Products, Menu & Services</label>
+        <textarea id="promptContent" placeholder="Loading current business instructions..."></textarea>
+      </div>
+
+      <button type="submit" class="btn" id="saveBtn">
+        <span>💾 Update WhatsApp AI Bot</span>
+      </button>
+    </form>
+
+    <div class="alert-success" id="successMsg">
+      ✨ Successfully updated! Your WhatsApp bot is now using these new details.
+    </div>
+  </div>
+</div>
+
+<script>
+  const urlParams = new URLSearchParams(window.location.search);
+  const secretKey = urlParams.get('key');
+
+  if (!secretKey) {
+    document.querySelector('.card').innerHTML = '<h2>Access Denied</h2><p style="color: #ef4444; margin-top: 8px;">Missing or invalid secret key. Please check the management link sent by HeyHay Studio.</p>';
+  } else {
+    // Load current prompt
+    fetch(`/api/client/portal?key=${encodeURIComponent(secretKey)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.name) {
+          document.getElementById('clientTitle').textContent = `${data.name} — Menu & Pricing`;
+          document.getElementById('promptContent').value = data.prompt;
+        } else {
+          document.querySelector('.card').innerHTML = '<h2>Invalid Portal Key</h2><p style="color: #ef4444; margin-top: 8px;">This key does not match an active client.</p>';
+        }
+      })
+      .catch(err => {
+        document.getElementById('promptContent').value = 'Failed to load details.';
+      });
+
+    // Save prompt
+    document.getElementById('portalForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const content = document.getElementById('promptContent').value;
+      const btn = document.getElementById('saveBtn');
+      btn.textContent = 'Saving...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/client/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: secretKey, prompt: content })
+        });
+        const result = await res.json();
+        if (result.status === 'ok') {
+          document.getElementById('successMsg').style.display = 'block';
+          setTimeout(() => { document.getElementById('successMsg').style.display = 'none'; }, 4000);
+        }
+      } catch (err) {
+        alert('Update failed: ' + err.message);
+      } finally {
+        btn.textContent = '💾 Update WhatsApp AI Bot';
+        btn.disabled = false;
+      }
+    });
+  }
+</script>
+
+</body>
+</html>
